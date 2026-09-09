@@ -1,0 +1,26 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}Accesso{% endblock %}
+
+{% block contenuto %}
+<div class="login-contenitore">
+  <form class="login-scheda" method="post" action="/admin/login">
+    <h2>Accesso amministratori</h2>
+
+    {% if errore %}
+      <p class="alert-errore">Username o password errati. Riprova.</p>
+    {% endif %}
+
+    <div class="campo">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autofocus>
+    </div>
+    <div class="campo">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+
+    <button type="submit">Accedi</button>
+  </form>
+</div>
+{% endblock %}

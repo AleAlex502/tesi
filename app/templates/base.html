@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block titolo %}Catalogo Musicoterapia{% endblock %} · Conservatorio di Verona</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="intestazione">
+    <div class="intestazione__contenuto">
+      <div>
+        <h1><a href="/">Catalogo Musicoterapia</a></h1>
+        <p class="intestazione__sottotitolo">Conservatorio di Verona</p>
+      </div>
+      <div class="intestazione__contatore">
+        Accessi all'archivio <strong>{{ contatore_accessi }}</strong>
+      </div>
+    </div>
+  </header>
+
+  {% block contenuto %}{% endblock %}
+
+</body>
+</html>

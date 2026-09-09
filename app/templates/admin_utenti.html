@@ -1,0 +1,40 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}Utenti{% endblock %}
+
+{% block contenuto %}
+<div class="admin-contenitore">
+
+  {% if request.query_params.get('esito') == 'creato' %}
+    <p class="alert-successo">Utente creato correttamente.</p>
+  {% endif %}
+
+  <div class="admin-barra">
+    <h2 class="admin-form__titolo" style="margin:0;">Utenti del pannello</h2>
+    <a class="btn" href="/admin/utenti/nuovo">+ Nuovo utente</a>
+  </div>
+
+  <table class="tabella-admin">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Ruolo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in utenti %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td><span class="badge badge--{{ 'tesi' if u.ruolo == 'Amministratore' else 'libro' }}">{{ u.ruolo }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="admin-nota">
+    I Bibliotecari possono inserire e modificare i materiali. Solo gli Amministratori possono
+    eliminarli e creare altri utenti.
+  </p>
+
+</div>
+{% endblock %}

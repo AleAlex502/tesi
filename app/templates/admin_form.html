@@ -1,0 +1,159 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}{{ titolo_pagina }}{% endblock %}
+
+{% block contenuto %}
+<div class="admin-contenitore admin-contenitore--form">
+
+  <a class="dettaglio__torna" href="/admin">&larr; Torna alla dashboard</a>
+  <h2 class="admin-form__titolo">{{ titolo_pagina }}</h2>
+
+  <form method="post" action="{{ azione }}" class="admin-form" enctype="multipart/form-data">
+
+    <fieldset>
+      <legend>Dati principali</legend>
+
+      <div class="campo">
+        <label for="titolo">Titolo *</label>
+        <input type="text" id="titolo" name="titolo" required value="{{ valori.titolo or '' }}">
+      </div>
+
+      <div class="form-riga">
+        <div class="campo">
+          <label for="tipologia">Tipologia</label>
+          <select id="tipologia" name="tipologia">
+            <option value="" {% if not valori.tipologia %}selected{% endif %}>—</option>
+            <option value="Libro" {% if valori.tipologia == 'Libro' %}selected{% endif %}>Libro</option>
+            <option value="Tesi" {% if valori.tipologia == 'Tesi' %}selected{% endif %}>Tesi</option>
+            <option value="Rivista" {% if valori.tipologia == 'Rivista' %}selected{% endif %}>Rivista</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="anno">Anno</label>
+          <input type="number" id="anno" name="anno" value="{{ valori.anno or '' }}">
+        </div>
+        <div class="campo">
+          <label for="num_pagine">N. pagine</label>
+          <input type="number" id="num_pagine" name="num_pagine" value="{{ valori.num_pagine or '' }}">
+        </div>
+      </div>
+
+      <div class="form-riga">
+        <div class="campo">
+          <label for="isbn">ISBN</label>
+          <input type="text" id="isbn" name="isbn" value="{{ valori.isbn or '' }}">
+        </div>
+        <div class="campo">
+          <label for="link_catalogo">Link catalogo ARV</label>
+          <input type="url" id="link_catalogo" name="link_catalogo" value="{{ valori.link_catalogo or '' }}">
+        </div>
+      </div>
+
+      <div class="form-riga">
+        <div class="campo">
+          <label for="ebp">Livello EBP</label>
+          <input type="text" id="ebp" name="ebp" value="{{ valori.ebp or '' }}">
+        </div>
+        <div class="campo">
+          <label for="livello">Livello</label>
+          <input type="text" id="livello" name="livello" value="{{ valori.livello or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Editore e lingua</legend>
+      <div class="form-riga">
+        <div class="campo">
+          <label for="editore_nome">Editore</label>
+          <input type="text" id="editore_nome" name="editore_nome" value="{{ valori.editore_nome or '' }}">
+        </div>
+        <div class="campo">
+          <label for="editore_citta">Città editore</label>
+          <input type="text" id="editore_citta" name="editore_citta" value="{{ valori.editore_citta or '' }}">
+        </div>
+      </div>
+      <div class="form-riga">
+        <div class="campo">
+          <label for="lingua_testo">Lingua del testo</label>
+          <input type="text" id="lingua_testo" name="lingua_testo" value="{{ valori.lingua_testo or '' }}">
+        </div>
+        <div class="campo">
+          <label for="lingua_originale">Lingua originale</label>
+          <input type="text" id="lingua_originale" name="lingua_originale" value="{{ valori.lingua_originale or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Testi</legend>
+      <div class="campo">
+        <label for="abstract">Abstract</label>
+        <textarea id="abstract" name="abstract" rows="3">{{ valori.abstract or '' }}</textarea>
+      </div>
+      <div class="campo">
+        <label for="indice">Indice</label>
+        <textarea id="indice" name="indice" rows="3">{{ valori.indice or '' }}</textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Classificazione</legend>
+      <div class="campo">
+        <label for="categoria">Categoria</label>
+        <input type="text" id="categoria" name="categoria" value="{{ categoria_testo }}">
+      </div>
+      <div class="campo">
+        <label for="tag">Tag (separati da virgola)</label>
+        <input type="text" id="tag" name="tag" value="{{ tag_testo }}" placeholder="Es. Autismo, Bambini">
+      </div>
+      <div class="campo">
+        <label for="subject_headings">Subject Headings (separati da virgola)</label>
+        <input type="text" id="subject_headings" name="subject_headings" value="{{ sh_testo }}">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Autori / curatori</legend>
+      <div class="campo">
+        <label for="persone">Una persona per riga. Per indicare il ruolo: Nome Cognome (Ruolo) — es. "Mario Rossi (Curatore)". Senza ruolo indicato, viene assunto "Autore".</label>
+        <textarea id="persone" name="persone" rows="3" placeholder="Mario Rossi (Autore)&#10;Anna Bianchi (Curatore)">{{ persone_testo }}</textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Copie fisiche in biblioteca</legend>
+      <div class="campo">
+        <label for="copie">Una copia per riga, formato: numero;collocazione;stato;note</label>
+        <textarea id="copie" name="copie" rows="3" placeholder="1;A-01;Disponibile;&#10;2;A-02;Disponibile;Seconda copia">{{ copie_testo }}</textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Allegato PDF (es. abstract)</legend>
+      {% if valori.allegato_pdf %}
+        <div class="campo">
+          <label>Allegato attuale</label>
+          <p class="allegato-attuale">
+            <a href="/static/allegati/{{ valori.allegato_pdf }}" target="_blank">Apri il PDF attuale &rarr;</a>
+          </p>
+          <label class="checkbox-riga">
+            <input type="checkbox" name="rimuovi_allegato" value="1">
+            Rimuovi l'allegato attuale
+          </label>
+        </div>
+      {% endif %}
+      <div class="campo">
+        <label for="allegato_pdf">{{ "Carica un nuovo PDF (sostituisce quello attuale)" if valori.allegato_pdf else "Carica un PDF" }}</label>
+        <input type="file" id="allegato_pdf" name="allegato_pdf" accept="application/pdf">
+      </div>
+    </fieldset>
+
+    <div class="admin-form__azioni">
+      <button type="submit">Salva</button>
+      <a href="/admin" class="btn-secondario">Annulla</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

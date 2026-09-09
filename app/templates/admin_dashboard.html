@@ -1,0 +1,71 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}Dashboard{% endblock %}
+
+{% block contenuto %}
+<div class="admin-contenitore">
+
+  {% if esito %}
+    {% if esito == 'permessi-insufficienti' %}
+      <p class="alert-errore">Quella sezione è riservata agli amministratori.</p>
+    {% else %}
+      <p class="alert-successo">
+        {%- if esito.startswith('creato') -%}
+          Materiale creato correttamente.
+        {%- elif esito.startswith('modificato') -%}
+          Materiale aggiornato correttamente.
+        {%- elif esito == 'eliminato' -%}
+          Materiale eliminato correttamente.
+        {%- endif -%}
+      </p>
+    {% endif %}
+  {% endif %}
+
+  <div class="admin-barra">
+    <form method="get" action="/admin" class="admin-barra__ricerca">
+      <input type="text" name="q" value="{{ q }}" placeholder="Cerca per titolo…">
+      <button type="submit">Cerca</button>
+    </form>
+    <a class="btn" href="/admin/nuovo">+ Nuovo materiale</a>
+  </div>
+
+  <table class="tabella-admin">
+    <thead>
+      <tr>
+        <th>Titolo</th>
+        <th>Anno</th>
+        <th>Tipologia</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in materiali %}
+        <tr>
+          <td>{{ m.titolo }}</td>
+          <td>{{ m.anno or '—' }}</td>
+          <td>
+            {% if m.tipologia %}
+              <span class="badge badge--{{ m.tipologia|lower }}">{{ m.tipologia }}</span>
+            {% endif %}
+          </td>
+          <td class="tabella-admin__azioni">
+            <a href="/catalogo/{{ m.id_materiale }}" target="_blank">Vedi</a>
+            <a href="/admin/modifica/{{ m.id_materiale }}">Modifica</a>
+            {% if admin.ruolo == 'Amministratore' %}
+              <form method="post" action="/admin/elimina/{{ m.id_materiale }}"
+                    onsubmit="return confirm('Eliminare definitivamente questo materiale?');">
+                <button type="submit" class="btn-link-pericolo">Elimina</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" class="tabella-admin__vuoto">Nessun materiale trovato.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block titolo %}{{ materiale.titolo }}{% endblock %}
+
+{% block contenuto %}
+<div class="dettaglio">
+
+  <a class="dettaglio__torna" href="/">&larr; Torna alla ricerca</a>
+
+  <div class="dettaglio__intestazione">
+    {% if materiale.tipologia %}
+      <span class="badge badge--{{ materiale.tipologia|lower }}">{{ materiale.tipologia }}</span>
+    {% endif %}
+    <h1 class="dettaglio__titolo">{{ materiale.titolo }}</h1>
+    {% if materiale.persone %}
+      <p class="dettaglio__autori">
+        {% for p in materiale.persone %}{{ p.nome }} {{ p.cognome }} ({{ p.ruolo }}){% if not loop.last %}; {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+  </div>
+
+  <dl class="scheda-campi">
+    {% if materiale.anno %}<dt>Anno</dt><dd>{{ materiale.anno }}</dd>{% endif %}
+    {% if materiale.editore_nome %}<dt>Editore</dt><dd>{{ materiale.editore_nome }}{% if materiale.editore_citta %}, {{ materiale.editore_citta }}{% endif %}</dd>{% endif %}
+    {% if materiale.num_pagine %}<dt>Pagine</dt><dd>{{ materiale.num_pagine }}</dd>{% endif %}
+    {% if materiale.isbn %}<dt>ISBN</dt><dd>{{ materiale.isbn }}</dd>{% endif %}
+    {% if materiale.lingua_testo %}<dt>Lingua del testo</dt><dd>{{ materiale.lingua_testo }}</dd>{% endif %}
+    {% if materiale.lingua_originale and materiale.lingua_originale != materiale.lingua_testo %}<dt>Lingua originale</dt><dd>{{ materiale.lingua_originale }}</dd>{% endif %}
+    {% if materiale.ebp %}<dt>Livello EBP</dt><dd>{{ materiale.ebp }}</dd>{% endif %}
+    {% if materiale.livello %}<dt>Livello</dt><dd>{{ materiale.livello }}</dd>{% endif %}
+    {% if materiale.link_catalogo %}<dt>Catalogo ARV</dt><dd><a href="{{ materiale.link_catalogo }}" target="_blank" rel="noopener">Apri scheda &rarr;</a></dd>{% endif %}
+    {% if materiale.allegato_pdf %}<dt>Allegato</dt><dd><a href="/static/allegati/{{ materiale.allegato_pdf }}" target="_blank" rel="noopener">Scarica il PDF &rarr;</a></dd>{% endif %}
+  </dl>
+
+  {% if materiale.abstract %}
+    <div class="dettaglio__blocco">
+      <h2>Abstract</h2>
+      <p>{{ materiale.abstract }}</p>
+    </div>
+  {% endif %}
+
+  {% if materiale.indice %}
+    <div class="dettaglio__blocco">
+      <h2>Indice</h2>
+      <p>{{ materiale.indice }}</p>
+    </div>
+  {% endif %}
+
+  {% if materiale.categorie or materiale.tag or materiale.subject_headings %}
+    <div class="dettaglio__blocco">
+      <h2>Classificazione</h2>
+      <ul class="tag-lista">
+        {% for c in materiale.categorie %}<li>{{ c }}</li>{% endfor %}
+        {% for t in materiale.tag %}<li>{{ t }}</li>{% endfor %}
+        {% for s in materiale.subject_headings %}<li>{{ s }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if materiale.copie %}
+    <div class="dettaglio__blocco">
+      <h2>Copie disponibili in biblioteca</h2>
+      <table class="tabella-copie">
+        <thead>
+          <tr><th>N.</th><th>Collocazione</th><th>Stato</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          {% for c in materiale.copie %}
+            <tr>
+              <td>{{ c.numero }}</td>
+              <td>{{ c.collocazione or '—' }}</td>
+              <td><span class="stato-pill">{{ c.stato or 'N/D' }}</span></td>
+              <td>{{ c.nota_critica or c.note or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block titolo %}Amministrazione{% endblock %} · Catalogo Musicoterapia</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="intestazione">
+    <div class="intestazione__contenuto">
+      <div>
+        <h1><a href="/admin">Pannello amministrazione</a></h1>
+        <p class="intestazione__sottotitolo">Catalogo Musicoterapia · Conservatorio di Verona</p>
+      </div>
+      {% if admin %}
+        <div class="admin-nav">
+          <a href="/" class="admin-nav__link">Vai al catalogo pubblico</a>
+          {% if admin.ruolo == 'Amministratore' %}
+            <a href="/admin/utenti" class="admin-nav__link">Utenti</a>
+          {% endif %}
+          <span class="admin-nav__utente">{{ admin.username }} · {{ admin.ruolo }}</span>
+          <a href="/admin/logout" class="admin-nav__link">Esci</a>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  {% block contenuto %}{% endblock %}
+
+</body>
+</html>

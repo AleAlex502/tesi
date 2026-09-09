@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block titolo %}Catalogo{% endblock %}
+
+{% block contenuto %}
+<div class="contenitore">
+
+  <aside class="filtri">
+    <h2>Cerca nel catalogo</h2>
+    <form method="get" action="/" id="form-ricerca">
+      <div class="campo">
+        <label for="titolo">Titolo</label>
+        <input type="text" id="titolo" name="titolo" value="{{ filtri.titolo or '' }}" placeholder="Es. Musicoterapia">
+      </div>
+      <div class="campo">
+        <label for="autore">Autore / curatore</label>
+        <input type="text" id="autore" name="autore" value="{{ filtri.autore or '' }}" placeholder="Es. Rossi">
+      </div>
+      <div class="campo">
+        <label for="anno">Anno</label>
+        <input type="number" id="anno" name="anno" value="{{ filtri.anno or '' }}" placeholder="Es. 2020">
+      </div>
+      <div class="campo">
+        <label for="editore">Editore</label>
+        <input type="text" id="editore" name="editore" value="{{ filtri.editore or '' }}">
+      </div>
+      <div class="campo">
+        <label for="lingua">Lingua del testo</label>
+        <input type="text" id="lingua" name="lingua" value="{{ filtri.lingua or '' }}">
+      </div>
+      <div class="campo">
+        <label for="categoria">Categoria</label>
+        <input type="text" id="categoria" name="categoria" value="{{ filtri.categoria or '' }}">
+      </div>
+      <div class="campo">
+        <label for="tag">Tag</label>
+        <input type="text" id="tag" name="tag" value="{{ filtri.tag or '' }}">
+      </div>
+      <div class="campo">
+        <label for="livello">Livello</label>
+        <input type="text" id="livello" name="livello" value="{{ filtri.livello or '' }}">
+      </div>
+      <div class="campo">
+        <label for="stato">Stato copia</label>
+        <input type="text" id="stato" name="stato" value="{{ filtri.stato or '' }}" placeholder="Es. Disponibile">
+      </div>
+      <div class="campo">
+        <label for="tipologia">Tipologia</label>
+        <select id="tipologia" name="tipologia">
+          <option value="" {% if not filtri.tipologia %}selected{% endif %}>Tutte</option>
+          <option value="Libro" {% if filtri.tipologia == 'Libro' %}selected{% endif %}>Libro</option>
+          <option value="Tesi" {% if filtri.tipologia == 'Tesi' %}selected{% endif %}>Tesi</option>
+          <option value="Rivista" {% if filtri.tipologia == 'Rivista' %}selected{% endif %}>Rivista</option>
+        </select>
+      </div>
+      <button type="submit">Cerca</button>
+      {% if ha_filtri %}
+        <a class="filtri__reset" href="/">Azzera i filtri</a>
+      {% endif %}
+    </form>
+  </aside>
+
+  <section>
+    <div class="risultati__intestazione">
+      <h2>Risultati</h2>
+      <div class="risultati__intestazione-destra">
+        <span class="risultati__conteggio">{{ risultati|length }} material{{ 'e' if risultati|length == 1 else 'i' }}</span>
+        {% if risultati %}
+          <button type="submit" form="form-ricerca" formaction="/esporta-csv" class="btn-esporta">Esporta CSV</button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if risultati %}
+      <ul class="elenco-schede">
+        {% for m in risultati %}
+          <li>
+            <a class="scheda" href="/catalogo/{{ m.id_materiale }}">
+              <div class="scheda__riga-alto">
+                <p class="scheda__titolo">{{ m.titolo }}</p>
+                {% if m.tipologia %}
+                  <span class="badge badge--{{ m.tipologia|lower }}">{{ m.tipologia }}</span>
+                {% endif %}
+              </div>
+              <p class="scheda__meta">
+                {%- if m.anno %}{{ m.anno }}{% endif -%}
+                {%- if m.editore %} · {{ m.editore }}{% endif -%}
+                {%- if m.lingua_testo %} · {{ m.lingua_testo }}{% endif -%}
+              </p>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="vuoto">
+        <strong>Nessun risultato</strong>
+        Prova a modificare o azzerare i filtri di ricerca.
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

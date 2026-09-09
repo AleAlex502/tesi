@@ -1,0 +1,48 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}Nuovo utente{% endblock %}
+
+{% block contenuto %}
+<div class="admin-contenitore admin-contenitore--form">
+
+  <a class="dettaglio__torna" href="/admin/utenti">&larr; Torna agli utenti</a>
+  <h2 class="admin-form__titolo">Nuovo utente</h2>
+
+  {% if errore %}
+    <p class="alert-errore">{{ errore }}</p>
+  {% endif %}
+
+  <form method="post" action="/admin/utenti/nuovo" class="admin-form">
+    <fieldset>
+      <legend>Dati di accesso</legend>
+      <div class="campo">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      <div class="form-riga">
+        <div class="campo">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required minlength="8">
+        </div>
+        <div class="campo">
+          <label for="conferma_password">Conferma password</label>
+          <input type="password" id="conferma_password" name="conferma_password" required minlength="8">
+        </div>
+      </div>
+      <div class="campo">
+        <label for="ruolo">Ruolo</label>
+        <select id="ruolo" name="ruolo">
+          <option value="Bibliotecario">Bibliotecario — può inserire e modificare i materiali</option>
+          <option value="Amministratore">Amministratore — può anche eliminare materiali e creare utenti</option>
+        </select>
+      </div>
+    </fieldset>
+
+    <div class="admin-form__azioni">
+      <button type="submit">Crea utente</button>
+      <a href="/admin/utenti" class="btn-secondario">Annulla</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}
