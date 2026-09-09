@@ -1,0 +1,53 @@
+{% extends "admin_base.html" %}
+
+{% block titolo %}Importa da Excel{% endblock %}
+
+{% block contenuto %}
+<div class="admin-contenitore admin-contenitore--form">
+
+  <a class="dettaglio__torna" href="/admin">&larr; Torna alla dashboard</a>
+  <h2 class="admin-form__titolo">Importa materiali da Excel</h2>
+
+  {% if errore %}
+    <p class="alert-errore">{{ errore }}</p>
+  {% endif %}
+
+  {% if risultato %}
+    <p class="alert-successo">
+      Importazione completata: {{ risultato.righe_elaborate }} material{{ 'e' if risultato.righe_elaborate == 1 else 'i' }} elaborat{{ 'o' if risultato.righe_elaborate == 1 else 'i' }}.
+    </p>
+    {% if risultato.errori %}
+      <div class="alert-errore">
+        <strong>{{ risultato.errori|length }} riga/righe non importata/e:</strong>
+        <ul>
+          {% for e in risultato.errori %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <p class="admin-nota" style="margin-top:0; margin-bottom:1.5rem;">
+    Il file deve avere la stessa struttura del file di esempio (stesse colonne: Titolo, Autore / Curatore,
+    Editore, Città editore, Lingua testo, Lingua originale, Anno, N. pagine, ISBN, Abstract, Indice,
+    Tipologia, EBP, Livello, Link catalogo ABV, Categoria, Tag 1-4, SH 1-3, N., Collocazione, Stato, Note,
+    Nota critica). Le righe già presenti (stesso ISBN, o stesso numero di copia) non vengono duplicate:
+    puoi ricaricare lo stesso file più volte in sicurezza, anche solo per aggiungere le righe nuove.
+  </p>
+
+  <form method="post" action="/admin/importa-excel" class="admin-form" enctype="multipart/form-data">
+    <fieldset>
+      <legend>File Excel</legend>
+      <div class="campo">
+        <label for="file_excel">Seleziona il file .xlsx</label>
+        <input type="file" id="file_excel" name="file_excel" accept=".xlsx" required>
+      </div>
+    </fieldset>
+
+    <div class="admin-form__azioni">
+      <button type="submit">Importa</button>
+      <a href="/admin" class="btn-secondario">Annulla</a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

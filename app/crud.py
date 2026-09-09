@@ -352,3 +352,140 @@ def parse_copie_testo(testo):
         })
 
     return risultato
+
+
+# ---------- Importazione da Excel (usata sia da import_excel.py che dal pannello admin) ----------
+# A differenza delle funzioni sopra (crea_materiale_completo ecc, che creano sempre un
+# materiale nuovo), queste evitano i duplicati: se rilanci l'importazione più volte,
+# righe già presenti (stesso ISBN, o stesso numero di copia) non vengono duplicate.
+
+def get_or_create_materiale(
+    connessione, titolo, anno, num_pagine, isbn, abstract, indice,
+    tipologia, ebp, livello, link_catalogo, id_editore, id_lingua_testo, id_lingua_originale
+):
+    cursor = connessione.cursor()
+
+    if isbn:
+        cursor.execute("SELECT id_materiale FROM Materiale WHERE isbn = %s LIMIT 1", (isbn,))
+    else:
+        cursor.execute(
+            "SELECT id_materiale FROM Materiale WHERE titolo = %s AND anno = %s AND tipologia = %s LIMIT 1",
+            (titolo, anno, tipologia)
+        )
+
+    risultato = cursor.fetchone()
+    if risultato:
+        cursor.close()
+        return risultato[0]
+
+    cursor.execute(
+        """
+        INSERT INTO Materiale (
+            titolo, anno, num_pagine, isbn, abstract, indice,
+            tipologia, ebp, livello, link_catalogo,
+            id_editore, id_lingua_testo, id_lingua_originale
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            titolo, anno, num_pagine, isbn, abstract, indice,
+            tipologia, ebp, livello, link_catalogo,
+            id_editore, id_lingua_testo, id_lingua_originale
+        )
+    )
+    connessione.commit()
+    id_materiale = cursor.lastrowid
+    cursor.close()
+    return id_materiale
+
+
+def get_or_create_copia_excel(connessione, numero, collocazione, stato, note, nota_critica, id_materiale):
+    cursor = connessione.cursor()
+    cursor.execute("SELECT id_copia FROM Copia WHERE numero = %s", (numero,))
+    risultato = cursor.fetchone()
+
+    if risultato:
+        cursor.close()
+        return risultato[0]
+
+    cursor.execute(
+        "INSERT INTO Copia (numero, collocazione, stato, note, nota_critica, id_materiale) VALUES (%s, %s, %s, %s, %s, %s)",
+        (numero, collocazione, stato, note, nota_critica, id_materiale)
+    )
+    connessione.commit()
+    id_copia = cursor.lastrowid
+    cursor.close()
+    return id_copia
+
+
+def _collega_dedup(connessione, tabella, colonne, valori):
+    cursor = connessione.cursor()
+    condizione = " AND ".join(f"{c} = %s" for c in colonne)
+    cursor.execute(f"SELECT * FROM {tabella} WHERE {condizione} LIMIT 1", valori)
+    if not cursor.fetchone():
+        segnaposto = ", ".join(["%s"] * len(colonne))
+        cursor.execute(
+            f"INSERT INTO {tabella} ({', '.join(colonne)}) VALUES ({segnaposto})", valori
+        )
+        connessione.commit()
+    cursor.close()
+
+
+def importa_riga_excel(connessione, row):
+    """
+    Importa una riga del file Excel (stesso formato di
+    Excel_test_catalogazione_musicoterapia.xlsx: colonne come "Titolo",
+    "Autore / Curatore", "Tag 1".."Tag 4", "SH 1".."SH 3", ecc.),
+    evitando duplicati. Restituisce l'id_materiale (nuovo o già esistente).
+    """
+    testo_persone = row.get("Autore / Curatore") or ""
+    lista_persone = testo_persone.split(";")
+
+    id_editore = get_or_create_editore(connessione, row.get("Editore"), row.get("Città editore"))
+    id_lingua_testo = get_or_create_lingua(connessione, row.get("Lingua testo"))
+    id_lingua_originale = get_or_create_lingua(connessione, row.get("Lingua originale"))
+
+    id_materiale = get_or_create_materiale(
+        connessione,
+        row.get("Titolo"), row.get("Anno"), row.get("N. pagine"), row.get("ISBN"),
+        row.get("Abstract"), row.get("Indice"), row.get("Tipologia"), row.get("EBP"),
+        row.get("Livello"), row.get("Link catalogo ABV"),
+        id_editore, id_lingua_testo, id_lingua_originale
+    )
+
+    id_categoria = get_or_create_categoria(connessione, row.get("Categoria"))
+    if id_categoria is not None:
+        _collega_dedup(connessione, "Materiale_Categoria", ["id_materiale", "id_categoria"], (id_materiale, id_categoria))
+
+    for colonna in ["Tag 1", "Tag 2", "Tag 3", "Tag 4"]:
+        id_tag = get_or_create_tag(connessione, row.get(colonna))
+        if id_tag is not None:
+            _collega_dedup(connessione, "Materiale_Tag", ["id_materiale", "id_tag"], (id_materiale, id_tag))
+
+    for colonna in ["SH 1", "SH 2", "SH 3"]:
+        id_sh = get_or_create_sh(connessione, row.get(colonna))
+        if id_sh is not None:
+            _collega_dedup(connessione, "Materiale_SH", ["id_materiale", "id_sh"], (id_materiale, id_sh))
+
+    get_or_create_copia_excel(
+        connessione, row.get("N."), row.get("Collocazione"), row.get("Stato"),
+        row.get("Note"), row.get("Nota critica"), id_materiale
+    )
+
+    for persona in lista_persone:
+        persona = persona.strip()
+        if not persona:
+            continue
+
+        if "(" in persona and persona.endswith(")"):
+            nome_completo, ruolo = persona.rsplit("(", 1)
+            nome_completo = nome_completo.strip()
+            ruolo = ruolo[:-1].strip()
+        else:
+            nome_completo = persona
+            ruolo = "Autore"
+
+        id_persona = get_or_create_persona(connessione, nome_completo)
+        _collega_dedup(connessione, "Materiale_Persona", ["id_materiale", "id_persona", "ruolo"], (id_materiale, id_persona, ruolo))
+
+    return id_materiale

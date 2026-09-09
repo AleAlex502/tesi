@@ -19,6 +19,7 @@
           <a href="/" class="admin-nav__link">Vai al catalogo pubblico</a>
           {% if admin.ruolo == 'Amministratore' %}
             <a href="/admin/utenti" class="admin-nav__link">Utenti</a>
+            <a href="/admin/importa-excel" class="admin-nav__link">Importa Excel</a>
           {% endif %}
           <span class="admin-nav__utente">{{ admin.username }} · {{ admin.ruolo }}</span>
           <a href="/admin/logout" class="admin-nav__link">Esci</a>

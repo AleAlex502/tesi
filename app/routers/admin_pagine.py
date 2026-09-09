@@ -1,10 +1,12 @@
 import os
+import io
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from openpyxl import load_workbook
 
 from app.database import get_connection
 from app.auth import verifica_password, crea_access_token, get_admin_by_username, admin_da_token, hash_password
@@ -522,3 +524,71 @@ def crea_nuovo_utente(
         )
 
     return RedirectResponse("/admin/utenti?esito=creato", status_code=303)
+
+
+# ---------- Importazione da Excel (solo Amministratore) ----------
+
+@router.get("/importa-excel")
+def form_importa_excel(request: Request):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+
+    return templates.TemplateResponse(
+        "admin_importa_excel.html",
+        {"request": request, "admin": admin, "risultato": None, "errore": None}
+    )
+
+
+@router.post("/importa-excel")
+async def esegui_importa_excel(request: Request, file_excel: UploadFile = File(...)):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+
+    if not file_excel.filename or not file_excel.filename.lower().endswith(".xlsx"):
+        return templates.TemplateResponse(
+            "admin_importa_excel.html",
+            {"request": request, "admin": admin, "risultato": None,
+             "errore": "Il file deve essere in formato .xlsx (lo stesso formato del file di test)."}
+        )
+
+    contenuto = await file_excel.read()
+
+    try:
+        workbook = load_workbook(io.BytesIO(contenuto))
+        sheet = workbook.active
+        headers = [cell.value for cell in sheet[1]]
+    except Exception:
+        return templates.TemplateResponse(
+            "admin_importa_excel.html",
+            {"request": request, "admin": admin, "risultato": None,
+             "errore": "Impossibile leggere il file. Verifica che sia un Excel .xlsx valido, con la stessa struttura del file di test."}
+        )
+
+    righe_elaborate = 0
+    errori = []
+
+    connessione = get_connection()
+    try:
+        for numero_riga, values in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            row = dict(zip(headers, values))
+
+            if not row.get("Titolo"):
+                continue
+
+            try:
+                crud.importa_riga_excel(connessione, row)
+                righe_elaborate += 1
+            except Exception as errore_riga:
+                errori.append(f"Riga {numero_riga}: {errore_riga}")
+    finally:
+        connessione.close()
+
+    return templates.TemplateResponse(
+        "admin_importa_excel.html",
+        {
+            "request": request, "admin": admin, "errore": None,
+            "risultato": {"righe_elaborate": righe_elaborate, "errori": errori},
+        }
+    )
