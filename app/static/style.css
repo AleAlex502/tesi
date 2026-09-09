@@ -431,6 +431,24 @@ button:focus-visible {
   color: var(--color-sage);
 }
 
+.piede-pagina {
+  max-width: 1100px;
+  margin: 2rem auto 0;
+  padding: 1.25rem 2rem 2rem;
+  border-top: 1px solid var(--color-line);
+  text-align: center;
+}
+
+.piede-pagina a {
+  font-size: 0.82rem;
+  color: var(--color-ink-soft);
+  text-decoration: none;
+}
+
+.piede-pagina a:hover {
+  color: var(--color-wine);
+}
+
 /* ---------- Pannello admin ---------- */
 
 .admin-nav {
