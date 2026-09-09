@@ -1,0 +1,115 @@
+Table Materiale {
+  id_materiale integer [primary key, increment]
+  id_editore integer
+  id_lingua_testo integer
+  id_lingua_originale integer
+  titolo varchar [not null]
+  anno integer
+  num_pagine integer
+  isbn varchar [unique]
+  abstract text
+  indice text
+  tipologia varchar
+  ebp varchar
+  livello varchar
+  link_catalogo varchar
+}
+
+Table Persona {
+  id_persona integer [primary key, increment]
+  nome varchar
+  cognome varchar
+}
+
+Table Editore {
+  id_editore integer [primary key, increment]
+  nome varchar [not null]
+  citta varchar
+}
+
+Table Lingua {
+  id_lingua integer [primary key, increment]
+  nome varchar [not null, unique]
+}
+
+Table Categoria {
+  id_categoria integer [primary key, increment]
+  nome varchar [not null, unique]
+}
+
+Table Tag {
+  id_tag integer [primary key, increment]
+  nome varchar [not null, unique]
+}
+
+Table SH {
+  id_sh integer [primary key, increment]
+  termine varchar [not null, unique]
+}
+
+Table Copia {
+  id_copia integer [primary key, increment]
+  numero varchar
+  collocazione varchar
+  stato varchar
+  note text
+  nota_critica text
+
+  id_materiale integer [not null]
+}
+
+Table Materiale_Persona {
+  id_materiale integer
+  id_persona integer
+  ruolo varchar
+
+  indexes {
+    (id_materiale, id_persona, ruolo) [pk]
+  }
+}
+
+Table Materiale_Categoria {
+  id_materiale integer
+  id_categoria integer
+
+  indexes {
+    (id_materiale, id_categoria) [pk]
+  }
+}
+
+Table Materiale_Tag {
+  id_materiale integer
+  id_tag integer
+
+  indexes {
+    (id_materiale, id_tag) [pk]
+  }
+}
+
+Table Materiale_SH {
+  id_materiale integer
+  id_sh integer
+
+  indexes {
+    (id_materiale, id_sh) [pk]
+  }
+}
+
+Ref: Materiale_Persona.id_materiale > Materiale.id_materiale
+Ref: Materiale_Persona.id_persona > Persona.id_persona
+
+Ref: Materiale_Categoria.id_materiale > Materiale.id_materiale
+Ref: Materiale_Categoria.id_categoria > Categoria.id_categoria
+
+Ref: Materiale_Tag.id_materiale > Materiale.id_materiale
+Ref: Materiale_Tag.id_tag > Tag.id_tag
+
+Ref: Copia.id_materiale > Materiale.id_materiale
+
+Ref: Materiale.id_editore > Editore.id_editore
+
+Ref: Materiale.id_lingua_testo > Lingua.id_lingua
+Ref: Materiale.id_lingua_originale > Lingua.id_lingua
+
+Ref: Materiale_SH.id_materiale > Materiale.id_materiale
+Ref: Materiale_SH.id_sh > SH.id_sh
