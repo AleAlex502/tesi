@@ -1,7 +1,7 @@
 import os
 import io
 import uuid
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
@@ -422,11 +422,31 @@ def elimina(request: Request, id_materiale: int):
 
     connessione = get_connection()
     try:
-        crud.elimina_materiale(connessione, id_materiale)
+        allegato = crud.elimina_materiale(connessione, id_materiale)
+    finally:
+        connessione.close()
+    _elimina_allegato_pdf(allegato)
+
+    return RedirectResponse("/admin?esito=eliminato", status_code=303)
+
+
+@router.post("/elimina-multipli")
+def elimina_multipli(request: Request, id_selezionati: List[int] = Form(...)):
+    admin = _admin_autenticato(request)
+    if not admin:
+        return RedirectResponse("/admin/login", status_code=303)
+    if admin.get("ruolo") != "Amministratore":
+        raise HTTPException(status_code=403, detail="Operazione riservata agli amministratori")
+
+    connessione = get_connection()
+    try:
+        for id_materiale in id_selezionati:
+            allegato = crud.elimina_materiale(connessione, id_materiale)
+            _elimina_allegato_pdf(allegato)
     finally:
         connessione.close()
 
-    return RedirectResponse("/admin?esito=eliminato", status_code=303)
+    return RedirectResponse(f"/admin?esito=eliminati-{len(id_selezionati)}", status_code=303)
 
 
 # ---------- Gestione utenti (solo Amministratore) ----------
@@ -541,7 +561,12 @@ def form_importa_excel(request: Request):
 
 
 @router.post("/importa-excel")
-async def esegui_importa_excel(request: Request, file_excel: UploadFile = File(...)):
+async def esegui_importa_excel(
+    request: Request,
+    file_excel: UploadFile = File(...),
+    modalita: str = Form("aggiungi"),
+    conferma_sostituzione: Optional[str] = Form(None),
+):
     admin, redirect = _richiedi_amministratore_html(request)
     if redirect:
         return redirect
@@ -551,6 +576,13 @@ async def esegui_importa_excel(request: Request, file_excel: UploadFile = File(.
             "admin_importa_excel.html",
             {"request": request, "admin": admin, "risultato": None,
              "errore": "Il file deve essere in formato .xlsx (lo stesso formato del file di test)."}
+        )
+
+    if modalita == "sostituisci" and not conferma_sostituzione:
+        return templates.TemplateResponse(
+            "admin_importa_excel.html",
+            {"request": request, "admin": admin, "risultato": None,
+             "errore": "Per sostituire completamente il catalogo devi spuntare la casella di conferma."}
         )
 
     contenuto = await file_excel.read()
@@ -568,9 +600,16 @@ async def esegui_importa_excel(request: Request, file_excel: UploadFile = File(.
 
     righe_elaborate = 0
     errori = []
+    materiali_eliminati = None
 
     connessione = get_connection()
     try:
+        if modalita == "sostituisci":
+            allegati_da_rimuovere = crud.elimina_tutti_i_materiali(connessione)
+            for nome_file in allegati_da_rimuovere:
+                _elimina_allegato_pdf(nome_file)
+            materiali_eliminati = None  # non serve mostrare il numero, il risultato parla da sé
+
         for numero_riga, values in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
             row = dict(zip(headers, values))
 
@@ -589,6 +628,9 @@ async def esegui_importa_excel(request: Request, file_excel: UploadFile = File(.
         "admin_importa_excel.html",
         {
             "request": request, "admin": admin, "errore": None,
-            "risultato": {"righe_elaborate": righe_elaborate, "errori": errori},
+            "risultato": {
+                "righe_elaborate": righe_elaborate, "errori": errori,
+                "sostituito": modalita == "sostituisci",
+            },
         }
     )

@@ -16,6 +16,8 @@
           Materiale aggiornato correttamente.
         {%- elif esito == 'eliminato' -%}
           Materiale eliminato correttamente.
+        {%- elif esito.startswith('eliminati-') -%}
+          {{ esito.split('-')[1] }} materiali eliminati correttamente.
         {%- endif -%}
       </p>
     {% endif %}
@@ -29,43 +31,89 @@
     <a class="btn" href="/admin/nuovo">+ Nuovo materiale</a>
   </div>
 
-  <table class="tabella-admin">
-    <thead>
-      <tr>
-        <th>Titolo</th>
-        <th>Anno</th>
-        <th>Tipologia</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in materiali %}
+  <form id="form-tabella" method="post" enctype="multipart/form-data" onsubmit="return confermaAzioneTabella(event)">
+
+    {% if admin.ruolo == 'Amministratore' and materiali %}
+      <div class="admin-azioni-multiple">
+        <button type="submit" formaction="/admin/elimina-multipli" class="btn-elimina-multipli">
+          Elimina selezionati
+        </button>
+      </div>
+    {% endif %}
+
+    <table class="tabella-admin">
+      <thead>
         <tr>
-          <td>{{ m.titolo }}</td>
-          <td>{{ m.anno or '—' }}</td>
-          <td>
-            {% if m.tipologia %}
-              <span class="badge badge--{{ m.tipologia|lower }}">{{ m.tipologia }}</span>
-            {% endif %}
-          </td>
-          <td class="tabella-admin__azioni">
-            <a href="/catalogo/{{ m.id_materiale }}" target="_blank">Vedi</a>
-            <a href="/admin/modifica/{{ m.id_materiale }}">Modifica</a>
+          {% if admin.ruolo == 'Amministratore' %}
+            <th class="tabella-admin__col-checkbox">
+              <input type="checkbox" onclick="selezionaTutti(this)" aria-label="Seleziona tutti">
+            </th>
+          {% endif %}
+          <th>Titolo</th>
+          <th>Anno</th>
+          <th>Tipologia</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in materiali %}
+          <tr>
             {% if admin.ruolo == 'Amministratore' %}
-              <form method="post" action="/admin/elimina/{{ m.id_materiale }}"
-                    onsubmit="return confirm('Eliminare definitivamente questo materiale?');">
-                <button type="submit" class="btn-link-pericolo">Elimina</button>
-              </form>
+              <td class="tabella-admin__col-checkbox">
+                <input type="checkbox" name="id_selezionati" value="{{ m.id_materiale }}">
+              </td>
             {% endif %}
-          </td>
-        </tr>
-      {% else %}
-        <tr>
-          <td colspan="4" class="tabella-admin__vuoto">Nessun materiale trovato.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+            <td>{{ m.titolo }}</td>
+            <td>{{ m.anno or '—' }}</td>
+            <td>
+              {% if m.tipologia %}
+                <span class="badge badge--{{ m.tipologia|lower }}">{{ m.tipologia }}</span>
+              {% endif %}
+            </td>
+            <td class="tabella-admin__azioni">
+              <a href="/catalogo/{{ m.id_materiale }}" target="_blank">Vedi</a>
+              <a href="/admin/modifica/{{ m.id_materiale }}">Modifica</a>
+              {% if admin.ruolo == 'Amministratore' %}
+                <button type="submit" formaction="/admin/elimina/{{ m.id_materiale }}" class="btn-link-pericolo">Elimina</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="{{ 5 if admin.ruolo == 'Amministratore' else 4 }}" class="tabella-admin__vuoto">Nessun materiale trovato.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </form>
 
 </div>
+
+<script>
+  function selezionaTutti(checkboxTesta) {
+    document.querySelectorAll('input[name="id_selezionati"]').forEach(function (cb) {
+      cb.checked = checkboxTesta.checked;
+    });
+  }
+
+  function confermaAzioneTabella(event) {
+    const bottone = event.submitter;
+    if (!bottone) return true;
+
+    if (bottone.classList.contains('btn-elimina-multipli')) {
+      const selezionati = document.querySelectorAll('input[name="id_selezionati"]:checked').length;
+      if (selezionati === 0) {
+        alert('Seleziona almeno un materiale da eliminare.');
+        return false;
+      }
+      return confirm('Eliminare definitivamente ' + selezionati + ' material' + (selezionati === 1 ? 'e' : 'i') + ' selezionat' + (selezionati === 1 ? 'o' : 'i') + '?');
+    }
+
+    if (bottone.classList.contains('btn-link-pericolo')) {
+      return confirm('Eliminare definitivamente questo materiale?');
+    }
+
+    return true;
+  }
+</script>
 {% endblock %}

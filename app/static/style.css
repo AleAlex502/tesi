@@ -606,6 +606,31 @@ button:focus-visible {
   text-decoration: underline;
 }
 
+.admin-azioni-multiple {
+  margin-bottom: 0.75rem;
+}
+
+.btn-elimina-multipli {
+  padding: 0.45rem 0.9rem;
+  background: none;
+  border: 1px solid var(--color-wine);
+  color: var(--color-wine);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-elimina-multipli:hover {
+  background: var(--color-wine);
+  color: #fff;
+}
+
+.tabella-admin__col-checkbox {
+  width: 2.5rem;
+  text-align: center;
+}
+
 .tabella-admin__vuoto {
   text-align: center;
   color: var(--color-ink-soft);
@@ -624,6 +649,16 @@ button:focus-visible {
   display: flex;
   justify-content: center;
   padding: 4rem 1.5rem;
+}
+
+.login-scheda-contenitore {
+  width: 100%;
+  max-width: 360px;
+}
+
+.login-scheda-contenitore > .dettaglio__torna {
+  display: block;
+  margin-bottom: 1rem;
 }
 
 .login-scheda {
@@ -730,6 +765,29 @@ button:focus-visible {
 
 .checkbox-riga input {
   width: auto !important;
+}
+
+.opzione-radio {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.85rem !important;
+  color: var(--color-ink) !important;
+  margin: 0 0 0.9rem !important;
+  cursor: pointer;
+}
+
+.opzione-radio:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+.opzione-radio input {
+  width: auto !important;
+  margin-top: 0.2rem;
+}
+
+.opzione-radio strong {
+  color: var(--color-ink);
 }
 
 .form-riga {

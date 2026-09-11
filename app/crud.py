@@ -180,13 +180,48 @@ def crea_copia(connessione, numero, collocazione, stato, note, nota_critica, id_
     cursor.close()
 
 
+def elimina_tutti_i_materiali(connessione):
+    """
+    Cancella TUTTI i materiali e i loro collegamenti (usata dalla modalità
+    "sostituisci" dell'importazione Excel). Non tocca le tabelle di supporto
+    (Editore, Lingua, Persona, Categoria, Tag, SH), che restano riutilizzabili.
+    Restituisce la lista dei nomi dei file allegato_pdf da cancellare anche
+    dal disco.
+    """
+    cursor = connessione.cursor()
+    cursor.execute("SELECT allegato_pdf FROM Materiale WHERE allegato_pdf IS NOT NULL")
+    allegati = [riga[0] for riga in cursor.fetchall()]
+    cursor.close()
+
+    cursor = connessione.cursor()
+    for tabella in ["Copia", "Materiale_Persona", "Materiale_Categoria", "Materiale_Tag", "Materiale_SH", "Materiale"]:
+        cursor.execute(f"DELETE FROM {tabella}")
+    connessione.commit()
+    cursor.close()
+
+    return allegati
+
+
 def elimina_materiale(connessione, id_materiale):
+    """
+    Elimina il materiale e i suoi collegamenti. Restituisce il nome del file
+    allegato_pdf che aveva (o None), così il chiamante può cancellarlo anche
+    dal disco (questo modulo non gestisce il filesystem).
+    """
+    cursor = connessione.cursor()
+    cursor.execute("SELECT allegato_pdf FROM Materiale WHERE id_materiale = %s", (id_materiale,))
+    riga = cursor.fetchone()
+    allegato = riga[0] if riga else None
+    cursor.close()
+
     cursor = connessione.cursor()
     for tabella in ["Copia", "Materiale_Persona", "Materiale_Categoria", "Materiale_Tag", "Materiale_SH"]:
         cursor.execute(f"DELETE FROM {tabella} WHERE id_materiale = %s", (id_materiale,))
     cursor.execute("DELETE FROM Materiale WHERE id_materiale = %s", (id_materiale,))
     connessione.commit()
     cursor.close()
+
+    return allegato
 
 
 def _collega_tutto(connessione, id_materiale, persone, categoria, tag, subject_headings, copie):
