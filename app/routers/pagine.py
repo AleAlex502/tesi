@@ -31,7 +31,6 @@ def leggi_contatore(connessione) -> int:
 
 
 def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
-    # "" -> nessun filtro, valori non numerici -> None
     if anno and anno.strip():
         try:
             return int(anno.strip())
@@ -40,7 +39,7 @@ def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
     return None
 
 
-def _costruisci_query_ricerca(titolo, autore, anno_da, anno_a, editore, lingua, categoria, tipologia, tag, livello, stato):
+def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato):
     """
     Query di ricerca condivisa tra la pagina HTML e l'esportazione CSV,
     così i due restano sempre coerenti sugli stessi filtri.
@@ -71,18 +70,13 @@ def _costruisci_query_ricerca(titolo, autore, anno_da, anno_a, editore, lingua, 
     if autore:
         condizioni.append("(p.nome LIKE %s OR p.cognome LIKE %s)")
         valori.extend([f"%{autore}%", f"%{autore}%"])
-    if anno_da is not None:
-        condizioni.append("m.anno >= %s")
-        valori.append(anno_da)
-    if anno_a is not None:
-        condizioni.append("m.anno <= %s")
-        valori.append(anno_a)
+    if anno_int is not None:
+        condizioni.append("m.anno = %s")
+        valori.append(anno_int)
     if editore:
         condizioni.append("e.nome LIKE %s")
         valori.append(f"%{editore}%")
     if lingua:
-        # corrispondenza esatta: il valore arriva da un menu a tendina con le
-        # sole lingue effettivamente presenti nel catalogo, non testo libero
         condizioni.append("l.nome = %s")
         valori.append(lingua)
     if categoria:
@@ -109,7 +103,7 @@ def _costruisci_query_ricerca(titolo, autore, anno_da, anno_a, editore, lingua, 
 
 
 def _lingue_disponibili(connessione):
-    """Restituisce la lista delle lingue disponibili nel catalogo"""
+    """Le lingue effettivamente presenti nel catalogo, per popolare il menu a tendina"""
     cursor = connessione.cursor()
     cursor.execute("SELECT DISTINCT nome FROM Lingua ORDER BY nome")
     lingue = [riga[0] for riga in cursor.fetchall()]
@@ -122,8 +116,7 @@ def pagina_ricerca(
     request: Request,
     titolo: Optional[str] = None,
     autore: Optional[str] = None,
-    anno_da: Optional[str] = None,
-    anno_a: Optional[str] = None,
+    anno: Optional[str] = None,
     editore: Optional[str] = None,
     lingua: Optional[str] = None,
     categoria: Optional[str] = None,
@@ -132,10 +125,9 @@ def pagina_ricerca(
     livello: Optional[str] = None,
     stato: Optional[str] = None,
 ):
-    anno_da_int = _normalizza_anno(anno_da)
-    anno_a_int = _normalizza_anno(anno_a)
+    anno_int = _normalizza_anno(anno)
     query, valori = _costruisci_query_ricerca(
-        titolo, autore, anno_da_int, anno_a_int, editore, lingua, categoria, tipologia, tag, livello, stato
+        titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato
     )
 
     connessione = get_connection()
@@ -151,7 +143,7 @@ def pagina_ricerca(
         connessione.close()
 
     filtri = {
-        "titolo": titolo, "autore": autore, "anno_da": anno_da_int, "anno_a": anno_a_int,
+        "titolo": titolo, "autore": autore, "anno": anno_int,
         "editore": editore, "lingua": lingua, "categoria": categoria, "tipologia": tipologia,
         "tag": tag, "livello": livello, "stato": stato,
     }
@@ -174,8 +166,7 @@ def pagina_ricerca(
 def esporta_csv(
     titolo: Optional[str] = None,
     autore: Optional[str] = None,
-    anno_da: Optional[str] = None,
-    anno_a: Optional[str] = None,
+    anno: Optional[str] = None,
     editore: Optional[str] = None,
     lingua: Optional[str] = None,
     categoria: Optional[str] = None,
@@ -185,12 +176,12 @@ def esporta_csv(
     stato: Optional[str] = None,
 ):
     """
-    Esporta in CSV gli stessi risultati che l'utente vede nella pagina di ricerca
+    Esporta in CSV gli stessi risultati che l'utente vede nella pagina di
+    ricerca, applicando gli stessi filtri (passati come query string)
     """
-    anno_da_int = _normalizza_anno(anno_da)
-    anno_a_int = _normalizza_anno(anno_a)
+    anno_int = _normalizza_anno(anno)
     query, valori = _costruisci_query_ricerca(
-        titolo, autore, anno_da_int, anno_a_int, editore, lingua, categoria, tipologia, tag, livello, stato
+        titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato
     )
 
     connessione = get_connection()
@@ -207,7 +198,8 @@ def esporta_csv(
     scrittore.writerow(["Titolo", "Anno", "Tipologia", "ISBN", "Editore", "Lingua del testo"])
     for m in risultati:
         isbn = m["isbn"] or ""
-        # no notazione scientifica per isbn
+        # ="..." forza Excel a trattare l'ISBN come testo, non come numero
+        # (altrimenti lo converte in notazione scientifica, es. 9,78E+12)
         isbn_excel = f'="{isbn}"' if isbn else ""
         scrittore.writerow([
             m["titolo"], m["anno"] or "", m["tipologia"] or "",

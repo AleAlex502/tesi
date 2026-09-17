@@ -10,8 +10,7 @@ router = APIRouter(prefix="/materiali", tags=["Materiali"])
 def cerca_materiali(
     titolo: Optional[str] = Query(None, description="Ricerca parziale nel titolo"),
     autore: Optional[str] = Query(None, description="Nome o cognome di autore/curatore/studente/relatore"),
-    anno_da: Optional[int] = Query(None, description="Anno di pubblicazione, da (incluso)"),
-    anno_a: Optional[int] = Query(None, description="Anno di pubblicazione, a (incluso)"),
+    anno: Optional[int] = Query(None, description="Anno di pubblicazione"),
     editore: Optional[str] = Query(None, description="Nome dell'editore"),
     lingua: Optional[str] = Query(None, description="Lingua del testo (corrispondenza esatta)"),
     isbn: Optional[str] = Query(None, description="ISBN esatto"),
@@ -22,8 +21,7 @@ def cerca_materiali(
     stato: Optional[str] = Query(None, description="Stato di una copia fisica, es. Disponibile"),
 ):
     """
-    Ricerca nel catalogo con filtri opzionali e combinabili.
-    Tutti i parametri sono facoltativi: se non passati non filtrano
+    ricerca nel catalogo con filtri opzionali e combinabili. parametri facoltativi.
     """
     condizioni = []
     valori = []
@@ -58,13 +56,9 @@ def cerca_materiali(
         condizioni.append("(p.nome LIKE %s OR p.cognome LIKE %s)")
         valori.extend([f"%{autore}%", f"%{autore}%"])
 
-    if anno_da is not None:
-        condizioni.append("m.anno >= %s")
-        valori.append(anno_da)
-
-    if anno_a is not None:
-        condizioni.append("m.anno <= %s")
-        valori.append(anno_a)
+    if anno is not None:
+        condizioni.append("m.anno = %s")
+        valori.append(anno)
 
     if editore:
         condizioni.append("e.nome LIKE %s")
