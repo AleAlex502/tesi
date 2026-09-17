@@ -8,7 +8,7 @@ from typing import Optional
 
 from app.database import get_connection
 
-router = APIRouter(include_in_schema=False)  
+router = APIRouter(include_in_schema=False)  # non serve mostrarlo in /docs, è HTML non API
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -31,6 +31,8 @@ def leggi_contatore(connessione) -> int:
 
 
 def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
+    # Il form invia il campo Anno anche quando è vuoto: trattiamo "" come "nessun filtro"
+    # e ignoriamo eventuali valori non numerici, invece di far fallire la richiesta.
     if anno and anno.strip():
         try:
             return int(anno.strip())
@@ -77,6 +79,8 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
         condizioni.append("e.nome LIKE %s")
         valori.append(f"%{editore}%")
     if lingua:
+        # corrispondenza esatta: il valore arriva da un menu a tendina con le
+        # sole lingue effettivamente presenti nel catalogo, non testo libero
         condizioni.append("l.nome = %s")
         valori.append(lingua)
     if categoria:
@@ -103,12 +107,21 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
 
 
 def _lingue_disponibili(connessione):
-    """Le lingue effettivamente presenti nel catalogo, per popolare il menu a tendina"""
+    """Le lingue effettivamente presenti nel catalogo, per popolare il menu a tendina."""
     cursor = connessione.cursor()
     cursor.execute("SELECT DISTINCT nome FROM Lingua ORDER BY nome")
     lingue = [riga[0] for riga in cursor.fetchall()]
     cursor.close()
     return lingue
+
+
+def _anni_disponibili(connessione):
+    """Gli anni effettivamente presenti nel catalogo, per popolare il menu a tendina."""
+    cursor = connessione.cursor()
+    cursor.execute("SELECT DISTINCT anno FROM Materiale WHERE anno IS NOT NULL ORDER BY anno DESC")
+    anni = [riga[0] for riga in cursor.fetchall()]
+    cursor.close()
+    return anni
 
 
 @router.get("/")
@@ -134,6 +147,7 @@ def pagina_ricerca(
     try:
         contatore = incrementa_e_leggi_contatore(connessione)
         lingue_disponibili = _lingue_disponibili(connessione)
+        anni_disponibili = _anni_disponibili(connessione)
 
         cursor = connessione.cursor(dictionary=True)
         cursor.execute(query, tuple(valori))
@@ -158,6 +172,7 @@ def pagina_ricerca(
             "ha_filtri": ha_filtri,
             "contatore_accessi": contatore,
             "lingue_disponibili": lingue_disponibili,
+            "anni_disponibili": anni_disponibili,
         }
     )
 
@@ -177,7 +192,7 @@ def esporta_csv(
 ):
     """
     Esporta in CSV gli stessi risultati che l'utente vede nella pagina di
-    ricerca, applicando gli stessi filtri (passati come query string)
+    ricerca, applicando gli stessi filtri (passati come query string).
     """
     anno_int = _normalizza_anno(anno)
     query, valori = _costruisci_query_ricerca(

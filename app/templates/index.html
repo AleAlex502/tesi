@@ -16,18 +16,14 @@
         <label for="autore">Autore / curatore</label>
         <input type="text" id="autore" name="autore" value="{{ filtri.autore or '' }}" placeholder="Es. Rossi">
       </div>
-      <div class="campo campo-anno-picker">
+      <div class="campo">
         <label for="anno">Anno</label>
-        <input type="text" id="anno" name="anno" value="{{ filtri.anno or '' }}" placeholder="Es. 2020"
-               autocomplete="off" inputmode="numeric" onfocus="apriSelettoreAnno()">
-        <div class="selettore-anno" id="selettore-anno">
-          <div class="selettore-anno__intestazione">
-            <button type="button" class="selettore-anno__nav" onclick="cambiaDecennio(-1)" aria-label="Decennio precedente">&laquo;</button>
-            <span id="selettore-anno__decennio"></span>
-            <button type="button" class="selettore-anno__nav" onclick="cambiaDecennio(1)" aria-label="Decennio successivo">&raquo;</button>
-          </div>
-          <div class="selettore-anno__griglia" id="selettore-anno__griglia"></div>
-        </div>
+        <select id="anno" name="anno">
+          <option value="" {% if not filtri.anno %}selected{% endif %}>Tutti</option>
+          {% for a in anni_disponibili %}
+            <option value="{{ a }}" {% if filtri.anno == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="campo">
         <label for="editore">Editore</label>
@@ -114,48 +110,4 @@
   </section>
 
 </div>
-
-<script>
-  var annoDecennioBase = Math.floor(new Date().getFullYear() / 10) * 10;
-
-  function disegnaGrigliaAnni() {
-    document.getElementById('selettore-anno__decennio').textContent = annoDecennioBase + ' - ' + (annoDecennioBase + 9);
-    var griglia = document.getElementById('selettore-anno__griglia');
-    griglia.innerHTML = '';
-    for (var i = 0; i < 10; i++) {
-      (function (anno) {
-        var cella = document.createElement('button');
-        cella.type = 'button';
-        cella.textContent = anno;
-        cella.className = 'selettore-anno__cella';
-        cella.onclick = function () {
-          document.getElementById('anno').value = anno;
-          document.getElementById('selettore-anno').classList.remove('selettore-anno--aperto');
-        };
-        griglia.appendChild(cella);
-      })(annoDecennioBase + i);
-    }
-  }
-
-  function apriSelettoreAnno() {
-    var valoreAttuale = parseInt(document.getElementById('anno').value, 10);
-    if (!isNaN(valoreAttuale)) {
-      annoDecennioBase = Math.floor(valoreAttuale / 10) * 10;
-    }
-    disegnaGrigliaAnni();
-    document.getElementById('selettore-anno').classList.add('selettore-anno--aperto');
-  }
-
-  function cambiaDecennio(direzione) {
-    annoDecennioBase += direzione * 10;
-    disegnaGrigliaAnni();
-  }
-
-  document.addEventListener('click', function (event) {
-    var contenitore = document.querySelector('.campo-anno-picker');
-    if (contenitore && !contenitore.contains(event.target)) {
-      document.getElementById('selettore-anno').classList.remove('selettore-anno--aperto');
-    }
-  });
-</script>
 {% endblock %}

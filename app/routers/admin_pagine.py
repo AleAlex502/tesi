@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from openpyxl import load_workbook
+import mysql.connector
 
 from app.database import get_connection
 from app.auth import verifica_password, crea_access_token, get_admin_by_username, admin_da_token, hash_password
@@ -221,6 +222,24 @@ def crea_nuovo(
             crud.parse_lista_semplice(subject_headings),
             crud.parse_copie_testo(copie),
         )
+    except mysql.connector.IntegrityError as errore:
+        if "isbn" in str(errore).lower():
+            messaggio_errore = f"Esiste già un materiale con ISBN \"{isbn}\". Modifica l'ISBN o cerca il materiale già presente nel catalogo."
+        else:
+            messaggio_errore = f"Impossibile salvare: {errore}"
+
+        return templates.TemplateResponse(
+            "admin_form.html",
+            {
+                "request": request, "admin": admin,
+                "titolo_pagina": "Nuovo materiale", "azione": "/admin/nuovo",
+                "valori": campi,
+                "persone_testo": persone or "", "copie_testo": copie or "",
+                "tag_testo": tag or "", "sh_testo": subject_headings or "",
+                "categoria_testo": categoria or "",
+                "errore": messaggio_errore,
+            }
+        )
     finally:
         connessione.close()
 
@@ -404,6 +423,25 @@ def salva_modifica(
             crud.parse_lista_semplice(subject_headings),
             crud.parse_copie_testo(copie),
         )
+    except mysql.connector.IntegrityError as errore:
+        if "isbn" in str(errore).lower():
+            messaggio_errore = f"Esiste già un altro materiale con ISBN \"{isbn}\". Modifica l'ISBN per continuare."
+        else:
+            messaggio_errore = f"Impossibile salvare: {errore}"
+
+        return templates.TemplateResponse(
+            "admin_form.html",
+            {
+                "request": request, "admin": admin,
+                "titolo_pagina": f"Modifica: {titolo}",
+                "azione": f"/admin/modifica/{id_materiale}",
+                "valori": campi,
+                "persone_testo": persone or "", "copie_testo": copie or "",
+                "tag_testo": tag or "", "sh_testo": subject_headings or "",
+                "categoria_testo": categoria or "",
+                "errore": messaggio_errore,
+            }
+        )
     finally:
         connessione.close()
 
@@ -453,9 +491,7 @@ def elimina_multipli(request: Request, id_selezionati: List[int] = Form(...)):
 
 def _richiedi_amministratore_html(request: Request):
     """
-    Come _admin_autenticato, ma restituisce anche un secondo valore che
-    indica se mancano i permessi (per distinguere "non loggato" da
-    "loggato ma senza i permessi di Amministratore").
+    Indica se l'utente è autenticato come amministratore.
     """
     admin = _admin_autenticato(request)
     if not admin:
@@ -608,7 +644,7 @@ async def esegui_importa_excel(
             allegati_da_rimuovere = crud.elimina_tutti_i_materiali(connessione)
             for nome_file in allegati_da_rimuovere:
                 _elimina_allegato_pdf(nome_file)
-            materiali_eliminati = None  # non serve mostrare il numero, il risultato parla da sé
+            materiali_eliminati = None  
 
         for numero_riga, values in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
             row = dict(zip(headers, values))
