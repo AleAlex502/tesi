@@ -10,8 +10,7 @@ from app.database import get_connection
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Dice a FastAPI dove si trova l'endpoint di login (usato solo per generare
-# la documentazione /docs, non incide sulla logica).
+# Dice a FastAPI dove si trova l'endpoint di login 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 

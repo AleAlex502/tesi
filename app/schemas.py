@@ -40,10 +40,6 @@ class MaterialeInput(BaseModel):
 
 
 class MaterialeUpdate(BaseModel):
-    """
-    Come MaterialeInput ma con tutti i campi opzionali: nella modifica
-    l'admin invia solo i campi che vuole effettivamente cambiare.
-    """
     titolo: Optional[str] = None
     anno: Optional[int] = None
     num_pagine: Optional[int] = None

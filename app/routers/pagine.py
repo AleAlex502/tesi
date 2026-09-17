@@ -8,7 +8,7 @@ from typing import Optional
 
 from app.database import get_connection
 
-router = APIRouter(include_in_schema=False)  # non serve mostrarlo in /docs, è HTML non API
+router = APIRouter(include_in_schema=False)  
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -31,8 +31,7 @@ def leggi_contatore(connessione) -> int:
 
 
 def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
-    # Il form invia il campo Anno anche quando è vuoto: trattiamo "" come "nessun filtro"
-    # e ignoriamo eventuali valori non numerici, invece di far fallire la richiesta.
+    # "" -> nessun filtro, valori non numerici -> None
     if anno and anno.strip():
         try:
             return int(anno.strip())
@@ -41,7 +40,7 @@ def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
     return None
 
 
-def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato):
+def _costruisci_query_ricerca(titolo, autore, anno_da, anno_a, editore, lingua, categoria, tipologia, tag, livello, stato):
     """
     Query di ricerca condivisa tra la pagina HTML e l'esportazione CSV,
     così i due restano sempre coerenti sugli stessi filtri.
@@ -72,15 +71,20 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
     if autore:
         condizioni.append("(p.nome LIKE %s OR p.cognome LIKE %s)")
         valori.extend([f"%{autore}%", f"%{autore}%"])
-    if anno_int is not None:
-        condizioni.append("m.anno = %s")
-        valori.append(anno_int)
+    if anno_da is not None:
+        condizioni.append("m.anno >= %s")
+        valori.append(anno_da)
+    if anno_a is not None:
+        condizioni.append("m.anno <= %s")
+        valori.append(anno_a)
     if editore:
         condizioni.append("e.nome LIKE %s")
         valori.append(f"%{editore}%")
     if lingua:
-        condizioni.append("l.nome LIKE %s")
-        valori.append(f"%{lingua}%")
+        # corrispondenza esatta: il valore arriva da un menu a tendina con le
+        # sole lingue effettivamente presenti nel catalogo, non testo libero
+        condizioni.append("l.nome = %s")
+        valori.append(lingua)
     if categoria:
         condizioni.append("c.nome LIKE %s")
         valori.append(f"%{categoria}%")
@@ -104,12 +108,22 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
     return query, valori
 
 
+def _lingue_disponibili(connessione):
+    """Restituisce la lista delle lingue disponibili nel catalogo"""
+    cursor = connessione.cursor()
+    cursor.execute("SELECT DISTINCT nome FROM Lingua ORDER BY nome")
+    lingue = [riga[0] for riga in cursor.fetchall()]
+    cursor.close()
+    return lingue
+
+
 @router.get("/")
 def pagina_ricerca(
     request: Request,
     titolo: Optional[str] = None,
     autore: Optional[str] = None,
-    anno: Optional[str] = None,  # arriva come stringa dal form; convertito sotto
+    anno_da: Optional[str] = None,
+    anno_a: Optional[str] = None,
     editore: Optional[str] = None,
     lingua: Optional[str] = None,
     categoria: Optional[str] = None,
@@ -118,14 +132,16 @@ def pagina_ricerca(
     livello: Optional[str] = None,
     stato: Optional[str] = None,
 ):
-    anno_int = _normalizza_anno(anno)
+    anno_da_int = _normalizza_anno(anno_da)
+    anno_a_int = _normalizza_anno(anno_a)
     query, valori = _costruisci_query_ricerca(
-        titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato
+        titolo, autore, anno_da_int, anno_a_int, editore, lingua, categoria, tipologia, tag, livello, stato
     )
 
     connessione = get_connection()
     try:
         contatore = incrementa_e_leggi_contatore(connessione)
+        lingue_disponibili = _lingue_disponibili(connessione)
 
         cursor = connessione.cursor(dictionary=True)
         cursor.execute(query, tuple(valori))
@@ -135,8 +151,8 @@ def pagina_ricerca(
         connessione.close()
 
     filtri = {
-        "titolo": titolo, "autore": autore, "anno": anno_int, "editore": editore,
-        "lingua": lingua, "categoria": categoria, "tipologia": tipologia,
+        "titolo": titolo, "autore": autore, "anno_da": anno_da_int, "anno_a": anno_a_int,
+        "editore": editore, "lingua": lingua, "categoria": categoria, "tipologia": tipologia,
         "tag": tag, "livello": livello, "stato": stato,
     }
     ha_filtri = any(filtri.values())
@@ -149,6 +165,7 @@ def pagina_ricerca(
             "filtri": filtri,
             "ha_filtri": ha_filtri,
             "contatore_accessi": contatore,
+            "lingue_disponibili": lingue_disponibili,
         }
     )
 
@@ -157,7 +174,8 @@ def pagina_ricerca(
 def esporta_csv(
     titolo: Optional[str] = None,
     autore: Optional[str] = None,
-    anno: Optional[str] = None,
+    anno_da: Optional[str] = None,
+    anno_a: Optional[str] = None,
     editore: Optional[str] = None,
     lingua: Optional[str] = None,
     categoria: Optional[str] = None,
@@ -167,12 +185,12 @@ def esporta_csv(
     stato: Optional[str] = None,
 ):
     """
-    Esporta in CSV gli stessi risultati che l'utente vede nella pagina di
-    ricerca, applicando gli stessi filtri (passati come query string).
+    Esporta in CSV gli stessi risultati che l'utente vede nella pagina di ricerca
     """
-    anno_int = _normalizza_anno(anno)
+    anno_da_int = _normalizza_anno(anno_da)
+    anno_a_int = _normalizza_anno(anno_a)
     query, valori = _costruisci_query_ricerca(
-        titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato
+        titolo, autore, anno_da_int, anno_a_int, editore, lingua, categoria, tipologia, tag, livello, stato
     )
 
     connessione = get_connection()
@@ -189,8 +207,7 @@ def esporta_csv(
     scrittore.writerow(["Titolo", "Anno", "Tipologia", "ISBN", "Editore", "Lingua del testo"])
     for m in risultati:
         isbn = m["isbn"] or ""
-        # ="..." forza Excel a trattare l'ISBN come testo, non come numero
-        # (altrimenti lo converte in notazione scientifica, es. 9,78E+12)
+        # no notazione scientifica per isbn
         isbn_excel = f'="{isbn}"' if isbn else ""
         scrittore.writerow([
             m["titolo"], m["anno"] or "", m["tipologia"] or "",

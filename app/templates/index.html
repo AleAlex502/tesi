@@ -17,8 +17,12 @@
         <input type="text" id="autore" name="autore" value="{{ filtri.autore or '' }}" placeholder="Es. Rossi">
       </div>
       <div class="campo">
-        <label for="anno">Anno</label>
-        <input type="number" id="anno" name="anno" value="{{ filtri.anno or '' }}" placeholder="Es. 2020">
+        <label>Anno</label>
+        <div class="campo-intervallo">
+          <input type="number" name="anno_da" value="{{ filtri.anno_da or '' }}" placeholder="Da" aria-label="Anno da">
+          <span class="campo-intervallo__separatore">–</span>
+          <input type="number" name="anno_a" value="{{ filtri.anno_a or '' }}" placeholder="A" aria-label="Anno a">
+        </div>
       </div>
       <div class="campo">
         <label for="editore">Editore</label>
@@ -26,7 +30,12 @@
       </div>
       <div class="campo">
         <label for="lingua">Lingua del testo</label>
-        <input type="text" id="lingua" name="lingua" value="{{ filtri.lingua or '' }}">
+        <select id="lingua" name="lingua">
+          <option value="" {% if not filtri.lingua %}selected{% endif %}>Tutte</option>
+          {% for l in lingue_disponibili %}
+            <option value="{{ l }}" {% if filtri.lingua == l %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="campo">
         <label for="categoria">Categoria</label>

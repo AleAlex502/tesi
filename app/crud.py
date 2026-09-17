@@ -1,6 +1,5 @@
 """
-Queste funzioni replicano la logica già usata in import_excel.py
-(evitano duplicati cercando prima se la riga esiste già).
+Queste funzioni evitano duplicati cercando prima se la riga esiste già.
 Sono condivise dagli endpoint di amministrazione per creare/collegare
 editori, lingue, persone, categorie, tag e subject headings.
 """
@@ -182,11 +181,8 @@ def crea_copia(connessione, numero, collocazione, stato, note, nota_critica, id_
 
 def elimina_tutti_i_materiali(connessione):
     """
-    Cancella TUTTI i materiali e i loro collegamenti (usata dalla modalità
-    "sostituisci" dell'importazione Excel). Non tocca le tabelle di supporto
-    (Editore, Lingua, Persona, Categoria, Tag, SH), che restano riutilizzabili.
-    Restituisce la lista dei nomi dei file allegato_pdf da cancellare anche
-    dal disco.
+    Cancella tutti i materiali e i loro collegamenti.
+    restituisce la lista dei nomi dei file allegato_pdf da cancellare anche dal disco.
     """
     cursor = connessione.cursor()
     cursor.execute("SELECT allegato_pdf FROM Materiale WHERE allegato_pdf IS NOT NULL")
@@ -205,8 +201,7 @@ def elimina_tutti_i_materiali(connessione):
 def elimina_materiale(connessione, id_materiale):
     """
     Elimina il materiale e i suoi collegamenti. Restituisce il nome del file
-    allegato_pdf che aveva (o None), così il chiamante può cancellarlo anche
-    dal disco (questo modulo non gestisce il filesystem).
+    allegato_pdf che aveva (o None), così il chiamante può cancellarlo anche dal disco.
     """
     cursor = connessione.cursor()
     cursor.execute("SELECT allegato_pdf FROM Materiale WHERE id_materiale = %s", (id_materiale,))
@@ -289,9 +284,8 @@ def crea_materiale_completo(connessione, campi, persone, categoria, tag, subject
 
 def aggiorna_materiale_completo(connessione, id_materiale, campi, persone, categoria, tag, subject_headings, copie):
     """
-    Aggiorna i campi diretti del materiale e SOSTITUISCE interamente i suoi
-    collegamenti (persone, categoria, tag, SH, copie) con quelli passati:
-    più semplice e prevedibile per un form che mostra "lo stato attuale".
+    Aggiorna i campi diretti del materiale e sostituisce interamente i suoi
+    collegamenti (persone, categoria, tag, SH, copie) con quelli passati
     """
     id_editore = get_or_create_editore(connessione, campi.get("editore_nome"), campi.get("editore_citta"))
     id_lingua_testo = get_or_create_lingua(connessione, campi.get("lingua_testo"))
@@ -389,10 +383,8 @@ def parse_copie_testo(testo):
     return risultato
 
 
-# ---------- Importazione da Excel (usata sia da import_excel.py che dal pannello admin) ----------
-# A differenza delle funzioni sopra (crea_materiale_completo ecc, che creano sempre un
-# materiale nuovo), queste evitano i duplicati: se rilanci l'importazione più volte,
-# righe già presenti (stesso ISBN, o stesso numero di copia) non vengono duplicate.
+# ---------- Importazione da Excel  ----------
+# eviano duplicati
 
 def get_or_create_materiale(
     connessione, titolo, anno, num_pagine, isbn, abstract, indice,
@@ -468,10 +460,8 @@ def _collega_dedup(connessione, tabella, colonne, valori):
 
 def importa_riga_excel(connessione, row):
     """
-    Importa una riga del file Excel (stesso formato di
-    Excel_test_catalogazione_musicoterapia.xlsx: colonne come "Titolo",
-    "Autore / Curatore", "Tag 1".."Tag 4", "SH 1".."SH 3", ecc.),
-    evitando duplicati. Restituisce l'id_materiale (nuovo o già esistente).
+    Importa una riga del file Excel evitando duplicati. 
+    Restituisce l'id_materiale (nuovo o già esistente).
     """
     testo_persone = row.get("Autore / Curatore") or ""
     lista_persone = testo_persone.split(";")

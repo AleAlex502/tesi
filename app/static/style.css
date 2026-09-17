@@ -148,6 +148,29 @@ a {
   color: var(--color-ink);
 }
 
+.campo-intervallo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.campo-intervallo input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.campo-intervallo__separatore {
+  color: var(--color-ink-soft);
+  flex-shrink: 0;
+}
+
 .campo input:focus,
 .campo select:focus,
 a:focus-visible,

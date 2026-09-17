@@ -8,8 +8,7 @@ from app.config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 def get_connection():
     """
     Apre una nuova connessione al database.
-    Va chiusa esplicitamente dal chiamante (usiamo un context manager
-    nei router, vedi esempio in routers/materiali.py).
+    Va chiusa esplicitamente dal chiamante 
     """
     try:
         connessione = mysql.connector.connect(
