@@ -27,13 +27,6 @@
     {% endif %}
   {% endif %}
 
-  <p class="admin-nota" style="margin-top:0; margin-bottom:1.5rem;">
-    Il file deve avere la stessa struttura del file di esempio (stesse colonne: Titolo, Autore / Curatore,
-    Editore, Città editore, Lingua testo, Lingua originale, Anno, N. pagine, ISBN, Abstract, Indice,
-    Tipologia, EBP, Livello, Link catalogo ABV, Categoria, Tag 1-4, SH 1-3, N., Collocazione, Stato, Note,
-    Nota critica).
-  </p>
-
   <form method="post" action="/admin/importa-excel" class="admin-form" enctype="multipart/form-data" onsubmit="return confermaImportazione()">
     <fieldset>
       <legend>File Excel</legend>
