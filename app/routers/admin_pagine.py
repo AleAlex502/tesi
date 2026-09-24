@@ -500,6 +500,13 @@ def _richiedi_amministratore_html(request: Request):
         return None, RedirectResponse("/admin?esito=permessi-insufficienti", status_code=303)
     return admin, None
 
+def _conta_amministratori(connessione) -> int:
+    cursor = connessione.cursor()
+    cursor.execute("SELECT COUNT(*) FROM Amministratore WHERE ruolo = 'Amministratore'")
+    n = cursor.fetchone()[0]
+    cursor.close()
+    return n
+ 
 
 @router.get("/utenti")
 def elenco_utenti(request: Request):
@@ -606,7 +613,131 @@ def form_reimposta_password(request: Request, id_admin: int):
         {"request": request, "admin": admin, "utente": utente, "errore": None}
     )
  
+
+@router.get("/utenti/{id_admin}/modifica")
+def form_modifica_utente(request: Request, id_admin: int):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
  
+    connessione = get_connection()
+    try:
+        cursor = connessione.cursor(dictionary=True)
+        cursor.execute("SELECT id_admin, username, ruolo FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        utente = cursor.fetchone()
+        cursor.close()
+    finally:
+        connessione.close()
+ 
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+ 
+    return templates.TemplateResponse(
+        "admin_utente_modifica.html",
+        {"request": request, "admin": admin, "utente": utente, "errore": None}
+    )
+ 
+ 
+@router.post("/utenti/{id_admin}/modifica")
+def salva_modifica_utente(
+    request: Request,
+    id_admin: int,
+    username: str = Form(...),
+    ruolo: str = Form(...),
+):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+ 
+    username = username.strip()
+    ruolo = ruolo if ruolo in ("Bibliotecario", "Amministratore") else "Bibliotecario"
+ 
+    connessione = get_connection()
+    try:
+        cursor = connessione.cursor(dictionary=True)
+        cursor.execute("SELECT id_admin, username, ruolo FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        utente = cursor.fetchone()
+        cursor.close()
+ 
+        if not utente:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+ 
+        errore = None
+        if not username:
+            errore = "Lo username non può essere vuoto."
+        elif (
+            ruolo != "Amministratore"
+            and utente["ruolo"] == "Amministratore"
+            and _conta_amministratori(connessione) <= 1
+        ):
+            errore = "Non puoi togliere il ruolo di Amministratore all'unico account amministratore rimasto."
+ 
+        if not errore:
+            cursor = connessione.cursor()
+            cursor.execute(
+                "SELECT id_admin FROM Amministratore WHERE username = %s AND id_admin != %s",
+                (username, id_admin)
+            )
+            if cursor.fetchone():
+                errore = f"Esiste già un altro utente con username \"{username}\"."
+            cursor.close()
+ 
+        if errore:
+            return templates.TemplateResponse(
+                "admin_utente_modifica.html",
+                {
+                    "request": request, "admin": admin,
+                    "utente": {"id_admin": id_admin, "username": username, "ruolo": ruolo},
+                    "errore": errore,
+                }
+            )
+ 
+        cursor = connessione.cursor()
+        cursor.execute(
+            "UPDATE Amministratore SET username = %s, ruolo = %s WHERE id_admin = %s",
+            (username, ruolo, id_admin)
+        )
+        connessione.commit()
+        cursor.close()
+    finally:
+        connessione.close()
+ 
+    return RedirectResponse("/admin/utenti?esito=utente-modificato", status_code=303)
+ 
+ 
+# ---------- Eliminazione utente (solo Amministratore) ----------
+ 
+@router.post("/utenti/{id_admin}/elimina")
+def elimina_utente(request: Request, id_admin: int):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+ 
+    connessione = get_connection()
+    try:
+        cursor = connessione.cursor(dictionary=True)
+        cursor.execute("SELECT id_admin, username, ruolo FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        utente = cursor.fetchone()
+        cursor.close()
+ 
+        if not utente:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+ 
+        if utente["username"] == admin["username"]:
+            return RedirectResponse("/admin/utenti?esito=errore-autoeliminazione", status_code=303)
+ 
+        if utente["ruolo"] == "Amministratore" and _conta_amministratori(connessione) <= 1:
+            return RedirectResponse("/admin/utenti?esito=errore-ultimo-amministratore", status_code=303)
+ 
+        cursor = connessione.cursor()
+        cursor.execute("DELETE FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        connessione.commit()
+        cursor.close()
+    finally:
+        connessione.close()
+ 
+    return RedirectResponse("/admin/utenti?esito=utente-eliminato", status_code=303)
+
 @router.post("/utenti/{id_admin}/reimposta-password")
 def esegui_reimposta_password(
     request: Request,

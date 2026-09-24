@@ -5,10 +5,19 @@
 {% block contenuto %}
 <div class="admin-contenitore">
 
-  {% if request.query_params.get('esito') == 'creato' %}
+  {% set esito = request.query_params.get('esito') %}
+  {% if esito == 'creato' %}
     <p class="alert-successo">Utente creato correttamente.</p>
-  {% elif request.query_params.get('esito') == 'password-reimpostata' %}
+  {% elif esito == 'password-reimpostata' %}
     <p class="alert-successo">Password reimpostata correttamente. Comunica la nuova password all'utente.</p>
+  {% elif esito == 'utente-modificato' %}
+    <p class="alert-successo">Utente modificato correttamente.</p>
+  {% elif esito == 'utente-eliminato' %}
+    <p class="alert-successo">Utente eliminato correttamente.</p>
+  {% elif esito == 'errore-autoeliminazione' %}
+    <p class="alert-errore">Non puoi eliminare l'account con cui hai effettuato l'accesso.</p>
+  {% elif esito == 'errore-ultimo-amministratore' %}
+    <p class="alert-errore">Non puoi eliminare l'unico account con ruolo Amministratore rimasto.</p>
   {% endif %}
 
   <div class="admin-barra">
@@ -30,7 +39,14 @@
           <td>{{ u.username }}</td>
           <td><span class="badge badge--{{ 'tesi' if u.ruolo == 'Amministratore' else 'libro' }}">{{ u.ruolo }}</span></td>
           <td class="tabella-admin__azioni">
+            <a href="/admin/utenti/{{ u.id_admin }}/modifica">Modifica</a>
             <a href="/admin/utenti/{{ u.id_admin }}/reimposta-password">Reimposta password</a>
+            {% if u.username != admin.username %}
+              <form method="post" action="/admin/utenti/{{ u.id_admin }}/elimina" style="display:inline;"
+                    onsubmit="return confirm('Eliminare definitivamente l\'utente ' + '{{ u.username }}' + '?');">
+                <button type="submit" class="btn-link-pericolo">Elimina</button>
+              </form>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}
