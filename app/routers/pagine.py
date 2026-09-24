@@ -1,14 +1,16 @@
 import csv
 import io
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 
 from app.database import get_connection
 
-router = APIRouter(include_in_schema=False)  # non serve mostrarlo in /docs, è HTML non API
+RISULTATI_PER_PAGINA = 20
+
+router = APIRouter(include_in_schema=False) 
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -31,8 +33,7 @@ def leggi_contatore(connessione) -> int:
 
 
 def _normalizza_anno(anno: Optional[str]) -> Optional[int]:
-    # Il form invia il campo Anno anche quando è vuoto: trattiamo "" come "nessun filtro"
-    # e ignoriamo eventuali valori non numerici, invece di far fallire la richiesta.
+    # Il form invia il campo Anno anche quando è vuoto
     if anno and anno.strip():
         try:
             return int(anno.strip())
@@ -79,8 +80,7 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
         condizioni.append("e.nome LIKE %s")
         valori.append(f"%{editore}%")
     if lingua:
-        # corrispondenza esatta: il valore arriva da un menu a tendina con le
-        # sole lingue effettivamente presenti nel catalogo, non testo libero
+        # nel menu a tendina ci sono solo le lingue effettivamente presenti nel catalogo
         condizioni.append("l.nome = %s")
         valori.append(lingua)
     if categoria:
@@ -101,7 +101,6 @@ def _costruisci_query_ricerca(titolo, autore, anno_int, editore, lingua, categor
 
     if condizioni:
         query += " AND " + " AND ".join(condizioni)
-    query += " ORDER BY m.titolo"
 
     return query, valori
 
@@ -137,6 +136,7 @@ def pagina_ricerca(
     tag: Optional[str] = None,
     livello: Optional[str] = None,
     stato: Optional[str] = None,
+    page: int = Query(default=1, ge=1)
 ):
     anno_int = _normalizza_anno(anno)
     query, valori = _costruisci_query_ricerca(
@@ -150,7 +150,19 @@ def pagina_ricerca(
         anni_disponibili = _anni_disponibili(connessione)
 
         cursor = connessione.cursor(dictionary=True)
-        cursor.execute(query, tuple(valori))
+
+        # Conta quante righe soddisfano i filtri prima di applicare limit/offset,
+        # per calcolare quante pagine ci sono in totale.
+        query_conteggio = f"SELECT COUNT(*) AS totale FROM ({query}) AS sottoquery"
+        cursor.execute(query_conteggio, tuple(valori))
+        totale_risultati = cursor.fetchone()["totale"]
+
+        totale_pagine = max(1, (totale_risultati + RISULTATI_PER_PAGINA - 1) // RISULTATI_PER_PAGINA)
+        pagina_corrente = min(page, totale_pagine)
+        offset = (pagina_corrente - 1) * RISULTATI_PER_PAGINA
+
+        query_paginata = query + " ORDER BY m.titolo LIMIT %s OFFSET %s"
+        cursor.execute(query_paginata, tuple(valori) + (RISULTATI_PER_PAGINA, offset))
         risultati = cursor.fetchall()
         cursor.close()
     finally:
@@ -173,6 +185,9 @@ def pagina_ricerca(
             "contatore_accessi": contatore,
             "lingue_disponibili": lingue_disponibili,
             "anni_disponibili": anni_disponibili,
+            "pagina_corrente": pagina_corrente,
+            "totale_pagine": totale_pagine,
+            "totale_risultati": totale_risultati,
         }
     )
 
@@ -193,11 +208,13 @@ def esporta_csv(
     """
     Esporta in CSV gli stessi risultati che l'utente vede nella pagina di
     ricerca, applicando gli stessi filtri (passati come query string).
+    Non paginato
     """
     anno_int = _normalizza_anno(anno)
     query, valori = _costruisci_query_ricerca(
         titolo, autore, anno_int, editore, lingua, categoria, tipologia, tag, livello, stato
     )
+    query += " ORDER BY m.titolo"
 
     connessione = get_connection()
     try:
@@ -222,7 +239,7 @@ def esporta_csv(
         ])
 
     # Il BOM UTF-8 in testa fa aprire correttamente gli accenti a Excel su Windows.
-    contenuto = "\ufeff" + buffer.getvalue()
+    contenuto = "﻿" + buffer.getvalue()
 
     return Response(
         content=contenuto,

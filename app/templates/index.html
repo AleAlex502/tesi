@@ -74,7 +74,7 @@
     <div class="risultati__intestazione">
       <h2>Risultati</h2>
       <div class="risultati__intestazione-destra">
-        <span class="risultati__conteggio">{{ risultati|length }} material{{ 'e' if risultati|length == 1 else 'i' }}</span>
+        <span class="risultati__conteggio">{{ totale_risultati }} material{{ 'e' if totale_risultati == 1 else 'i' }}</span>
         {% if risultati %}
           <button type="submit" form="form-ricerca" formaction="/esporta-csv" class="btn-esporta">Esporta CSV</button>
         {% endif %}
@@ -101,6 +101,28 @@
           </li>
         {% endfor %}
       </ul>
+
+      {% if totale_pagine > 1 %}
+        <nav class="paginazione" aria-label="Navigazione risultati">
+          <p class="paginazione__info">
+            Pagina {{ pagina_corrente }} di {{ totale_pagine }}
+          </p>
+          <div class="paginazione__link">
+            {% if pagina_corrente > 1 %}
+              <a class="paginazione__precedente"
+                 href="/?{% for chiave, valore in filtri.items() %}{% if valore %}{{ chiave }}={{ valore }}&{% endif %}{% endfor %}page={{ pagina_corrente - 1 }}">
+                &laquo; Precedente
+              </a>
+            {% endif %}
+            {% if pagina_corrente < totale_pagine %}
+              <a class="paginazione__successiva"
+                 href="/?{% for chiave, valore in filtri.items() %}{% if valore %}{{ chiave }}={{ valore }}&{% endif %}{% endfor %}page={{ pagina_corrente + 1 }}">
+                Successiva &raquo;
+              </a>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
     {% else %}
       <div class="vuoto">
         <strong>Nessun risultato</strong>
