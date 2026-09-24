@@ -109,7 +109,19 @@ python create_admin.py
 
 Segue le indicazioni a schermo (username, password, ruolo → scegli "Amministratore").
 
-### 6. Avvio
+### 6. Dati di esempio
+
+Il repository include un file Excel di prova (`Excel_test_catalogazione_musicoterapia.xlsx`) con
+alcuni materiali di esempio, utile per vedere subito l'applicazione popolata:
+
+```bash
+python import_excel.py Excel_test_catalogazione_musicoterapia.xlsx
+```
+
+Senza questo passaggio il catalogo resta vuoto (nessun errore: semplicemente zero materiali finché
+non ne inserisci o importi qualcuno).
+
+### 7. Avvio
 
 ```bash
 uvicorn app.main:app --reload
@@ -119,16 +131,11 @@ uvicorn app.main:app --reload
 - Pannello admin: [http://127.0.0.1:8000/admin](http://127.0.0.1:8000/admin)
 - Documentazione API interattiva: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### 7. (Facoltativo) Importazione dati da Excel
-
-Da terminale:
-```bash
-python import_excel.py nome_del_file.xlsx
-```
-oppure dal pannello admin, come Amministratore: **Importa Excel** in alto nella
-navigazione. Il file deve avere le stesse colonne del file di esempio incluso nel
-repository. Le righe già presenti (stesso ISBN, o stesso numero di copia) non
-vengono duplicate.
+Per importare in seguito un file Excel diverso (es. con i dati reali del Conservatorio, una volta
+disponibili), rilancia lo stesso comando del passaggio 6 con il nome del nuovo file — oppure, da
+Amministratore, usa la voce **Importa Excel** nel pannello admin. Le righe già presenti (stesso ISBN,
+o stesso numero di copia) non vengono duplicate: il comando/la funzione si possono rilanciare più
+volte in sicurezza.
 
 ## Distribuzione online
 
@@ -142,7 +149,7 @@ Python/ASGI (es. Render) con un database MySQL esterno (es. Clever Cloud, Aiven)
 
 **Nota**: gli allegati PDF vengono salvati su disco (`app/static/allegati/`). Su
 piattaforme con filesystem effimero (come i piani gratuiti di molti hosting), i
-file caricati non sopravvivono a un riavvio o a un nuovo deploy; il database
+file caricati non sopravvivono a un riavvio o a un nuovo deploy — il database
 resta invece sempre intatto.
 
 ## Sicurezza

@@ -7,6 +7,8 @@
 
   {% if request.query_params.get('esito') == 'creato' %}
     <p class="alert-successo">Utente creato correttamente.</p>
+  {% elif request.query_params.get('esito') == 'password-reimpostata' %}
+    <p class="alert-successo">Password reimpostata correttamente. Comunica la nuova password all'utente.</p>
   {% endif %}
 
   <div class="admin-barra">
@@ -19,6 +21,7 @@
       <tr>
         <th>Username</th>
         <th>Ruolo</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -26,6 +29,9 @@
         <tr>
           <td>{{ u.username }}</td>
           <td><span class="badge badge--{{ 'tesi' if u.ruolo == 'Amministratore' else 'libro' }}">{{ u.ruolo }}</span></td>
+          <td class="tabella-admin__azioni">
+            <a href="/admin/utenti/{{ u.id_admin }}/reimposta-password">Reimposta password</a>
+          </td>
         </tr>
       {% endfor %}
     </tbody>

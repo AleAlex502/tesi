@@ -581,6 +581,77 @@ def crea_nuovo_utente(
 
     return RedirectResponse("/admin/utenti?esito=creato", status_code=303)
 
+# ---------- Reimposta password di un utente (solo Amministratore) ----------
+ 
+@router.get("/utenti/{id_admin}/reimposta-password")
+def form_reimposta_password(request: Request, id_admin: int):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+ 
+    connessione = get_connection()
+    try:
+        cursor = connessione.cursor(dictionary=True)
+        cursor.execute("SELECT id_admin, username FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        utente = cursor.fetchone()
+        cursor.close()
+    finally:
+        connessione.close()
+ 
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+ 
+    return templates.TemplateResponse(
+        "admin_reimposta_password.html",
+        {"request": request, "admin": admin, "utente": utente, "errore": None}
+    )
+ 
+ 
+@router.post("/utenti/{id_admin}/reimposta-password")
+def esegui_reimposta_password(
+    request: Request,
+    id_admin: int,
+    password: str = Form(...),
+    conferma_password: str = Form(...),
+):
+    admin, redirect = _richiedi_amministratore_html(request)
+    if redirect:
+        return redirect
+ 
+    connessione = get_connection()
+    try:
+        cursor = connessione.cursor(dictionary=True)
+        cursor.execute("SELECT id_admin, username FROM Amministratore WHERE id_admin = %s", (id_admin,))
+        utente = cursor.fetchone()
+        cursor.close()
+ 
+        if not utente:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+ 
+        errore = None
+        if password != conferma_password:
+            errore = "Le due password non coincidono."
+        elif len(password) < 8:
+            errore = "La password deve avere almeno 8 caratteri."
+ 
+        if errore:
+            return templates.TemplateResponse(
+                "admin_reimposta_password.html",
+                {"request": request, "admin": admin, "utente": utente, "errore": errore}
+            )
+ 
+        cursor = connessione.cursor()
+        cursor.execute(
+            "UPDATE Amministratore SET password_hash = %s WHERE id_admin = %s",
+            (hash_password(password), id_admin)
+        )
+        connessione.commit()
+        cursor.close()
+    finally:
+        connessione.close()
+ 
+    return RedirectResponse("/admin/utenti?esito=password-reimpostata", status_code=303)
+
 
 # ---------- Importazione da Excel (solo Amministratore) ----------
 
